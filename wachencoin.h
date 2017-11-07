@@ -64,7 +64,7 @@ void interfaz(lista_t* procesamientos, usuario_t* usuarios[]);
 		
 
 //Funcion principal.
-int wachencoin(int argc,char *argv[]);
+int main(int argc,char *argv[]);
 
 
 
