@@ -1,3 +1,6 @@
+#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -74,7 +77,7 @@ char *substr(const char *str, size_t n);
 
 //Funcion que carga los usuarios registrados en un determinado archivo csv, a un array. 
 //Pos: devuelve un puntero al array usuarios.
-usuario_t** cargador_usuarios(int argc, char* argv[], usuario_t** usuarios){ //vector_t* usuarios, FILE* archivo);
+usuario_t** cargador_usuarios(char* argv[], usuario_t** usuarios){ //vector_t* usuarios, FILE* archivo);
 	FILE *archivo;
 	if((archivo = fopen(argv[1], "r")) == NULL) {
 		fprintf(stderr, "No pudo abrirse las cuentas de los usuarios \"%s\"!\n", argv[1]);
@@ -264,6 +267,9 @@ bool pagar(lista_t* procesamientos, pila_t* pila_scripts,int id){
 //Funcion que agregará a la cola de procesamiento la transacción. El monto es siempre positivo.
 void agregar_pago(lista_t* procesamientos, usuario_t** us, int id, double monto, char* codigo_procesado){
 	pila_t* pila_scripts = pila_crear();
+	if(monto < 0.0) {
+		fprintf(stderr, "Error en comando <agregar_pago>\n");
+	}
 	char** codigo= split(codigo_procesado, ';');
 	for(int pos = 0; codigo[pos] != NULL; pos++){
 		if(strcmp(codigo[pos],"validar_usuario") == 0){
@@ -291,7 +297,7 @@ void agregar_pago(lista_t* procesamientos, usuario_t** us, int id, double monto,
 // Funcion que devuelve por stdout, la cantidad y monto total de las transacciones sin realizar.
 void pagos_pendientes(lista_t* procesamientos){
 	lista_iter_t* iterador = lista_iter_crear(procesamientos);
-	//size_t largo = lista_largo(procesamientos);
+	size_t largo = lista_largo(procesamientos);
 	double monto_total = 0.0; 
 	while(!lista_iter_al_final(iterador)){
 		usuario_t* actual = lista_iter_ver_actual(iterador);
@@ -299,7 +305,8 @@ void pagos_pendientes(lista_t* procesamientos){
 		lista_iter_avanzar(iterador);
 	}
 	lista_iter_destruir(iterador);
-	
+	printf("Cantidad de pagos sin procesar: %zu, Monto Total: %.3f.\n",largo,monto_total);
+
 }
 
 //Funcion que procesa hasta un número no negativo de pagos pendientes.
@@ -402,11 +409,15 @@ void interfaz(lista_t* procesamientos, usuario_t** usuarios){
 	char** linea_procesada = lector_entrada();
 	if (linea_procesada == NULL) return ;
 	if(strcmp(linea_procesada[0],"finalizar") == 0){
+		printf("OK\n");
 		free_strv(linea_procesada);
 		return;
 	}
 	int loop = comandos(procesamientos,usuarios,linea_procesada);
-	if(loop == 0) printf("OK\n");
+	if(loop == 0){
+		printf("OK\n");
+		free_strv(linea_procesada);
+	}
 	else{
 		free_strv(linea_procesada);
 		return;
@@ -430,9 +441,10 @@ int main(int argc,char *argv[]){
 		return 1;
 	}
 	
+
 	usuario_t**  usuarios = malloc(sizeof(usuario_t*)*CANTIDAD_USUARIOS); //= malloc(sizeof(usuario_t)*CANTIDAD_USUARIOS);
 	if(usuarios == NULL) return 0;
-	usuarios = cargador_usuarios(argc,argv,usuarios);  
+	usuarios = cargador_usuarios(argv,usuarios);  
 	if(usuarios == NULL) return 0;
 	lista_t* procesamientos = crear_cola_procesamientos();  	
 	interfaz(procesamientos,usuarios);
